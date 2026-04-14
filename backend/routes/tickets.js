@@ -35,4 +35,7 @@ router.get('/:id', (req, res) => {
   }});
 });
 
-module.exports = { router, tickets };   // export tickets for tests
+module.exports = {
+  router,
+  tickets,
+};   // export tickets for tests

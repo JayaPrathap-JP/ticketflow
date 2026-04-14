@@ -56,4 +56,4 @@ router.get('/:id', (req, res) => {
   res.json({ success: true, booking: b });
 });
 
-module.exports = { router, bookings };
+module.exports = router;

@@ -2,7 +2,7 @@ const express  = require('express');
 const morgan   = require('morgan');
 const cors     = require('cors');
 
-const ticketRoutes  = require('./routes/tickets');
+const { router: ticketRoutes } = require('./routes/tickets');
 const bookingRoutes = require('./routes/bookings');
 const eventRoutes   = require('./routes/events');
 
