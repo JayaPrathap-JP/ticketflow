@@ -117,6 +117,7 @@ pipeline {
             
             parallel {
                 stage("Backend Image") {
+                    agent any
                     steps {
                         dir("backend") {
                             bat "docker build -t %BACKEND_IMG% ."
@@ -124,6 +125,7 @@ pipeline {
                     }
                 }
                 stage("Frontend Image") {
+                    agent any
                     steps {
                         dir("frontend") {
                             bat "docker build -t %FRONTEND_IMG% ."
