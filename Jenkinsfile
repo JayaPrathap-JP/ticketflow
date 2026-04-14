@@ -223,7 +223,7 @@ pipeline {
     post {
         
         failure {
-            node {
+            node('any') {
             echo "Pipeline FAILED — initiating rollback..."
             withCredentials([file(
                 credentialsId: "${KUBE_CREDS}",
@@ -237,12 +237,12 @@ pipeline {
             }
         }
         success {
-            node {
+            node('any') {
             echo "Pipeline SUCCEEDED — TicketFlow deployed successfully."
         }
         }
         always {
-            node{
+            node('any') {
             bat "docker logout || exit /b 0"
             cleanWs()
             }
