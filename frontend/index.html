@@ -143,13 +143,17 @@
 
     async function load() {
       try {
-        const res  = await fetch('/api/tickets');
+        const res = await fetch('/api/tickets');
         const data = await res.json();
-        allTickets = data.tickets;
+
+        // Support both response formats
+        allTickets = Array.isArray(data) ? data : data.tickets;
+
         render();
-      } catch(e) {
+      } catch (e) {
         document.getElementById('grid').innerHTML =
           '<p style="color:var(--muted);padding:24px">Failed to load tickets.</p>';
+        console.error('Error loading tickets:', e);
       }
     }
 
