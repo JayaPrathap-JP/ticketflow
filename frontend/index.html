@@ -139,23 +139,20 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    let allTickets = [], currentTicket = null, currentFilter = 'all';
+    let currentTicket = null, currentFilter = 'all';
 
-    async function load() {
-      try {
-        const res = await fetch('/api/tickets');
-        const data = await res.json();
+    const allTickets = [
+      { id: 't1', event: 'CSK vs MI — IPL 2025', category: 'Sports', venue: 'MA Chidambaram Stadium, Chennai', date: '2025-04-20', time: '7:30 PM', price: 1200, availableSeats: 340, available: true },
+      { id: 't2', event: 'RCB vs KKR — IPL 2025', category: 'Sports', venue: 'M. Chinnaswamy Stadium, Bengaluru', date: '2025-04-23', time: '7:30 PM', price: 950, availableSeats: 15, available: true },
+      { id: 't3', event: 'AR Rahman Live in Concert', category: 'Concert', venue: 'YMCA Grounds, Chennai', date: '2025-05-03', time: '6:00 PM', price: 1800, availableSeats: 200, available: true },
+      { id: 't4', event: 'Arijit Singh World Tour', category: 'Concert', venue: 'DY Patil Stadium, Mumbai', date: '2025-05-10', time: '7:00 PM', price: 2500, availableSeats: 0, available: false },
+      { id: 't5', event: 'India Tech Summit 2025', category: 'Conference', venue: 'Bharat Mandapam, New Delhi', date: '2025-05-15', time: '9:00 AM', price: 3500, availableSeats: 80, available: true },
+      { id: 't6', event: 'SRH vs DC — IPL 2025', category: 'Sports', venue: 'Rajiv Gandhi Stadium, Hyderabad', date: '2025-04-26', time: '3:30 PM', price: 800, availableSeats: 500, available: true },
+      { id: 't7', event: 'Diljit Dosanjh — Dil-Luminati Tour', category: 'Concert', venue: 'Jawaharlal Nehru Stadium, Delhi', date: '2025-05-18', time: '6:30 PM', price: 2000, availableSeats: 12, available: true },
+      { id: 't8', event: 'AI & Future of Work Conference', category: 'Conference', venue: 'HICC, Hyderabad', date: '2025-05-22', time: '10:00 AM', price: 2800, availableSeats: 150, available: true },
+    ];
 
-        // Support both response formats
-        allTickets = Array.isArray(data) ? data : data.tickets;
-
-        render();
-      } catch (e) {
-        document.getElementById('grid').innerHTML =
-          '<p style="color:var(--muted);padding:24px">Failed to load tickets.</p>';
-        console.error('Error loading tickets:', e);
-      }
-    }
+    function load() { render(); }
 
     function render() {
       const list = currentFilter === 'all'
@@ -217,28 +214,23 @@
       document.getElementById('summary').innerHTML = `
         <div class="row"><span>Ticket price</span><span>₹${currentTicket.price}</span></div>
         <div class="row"><span>Quantity</span><span>${qty}</span></div>
-        <div class="row total"><span>Total</span><span>₹${total}</span></div>`,
+        <div class="row total"><span>Total</span><span>₹${total}</span></div>`;
     }
-    async function confirmBooking() {
+    function confirmBooking() {
       const name  = document.getElementById('f-name').value.trim();
       const email = document.getElementById('f-email').value.trim();
       const qty   = parseInt(document.getElementById('f-qty').value);
       if (!name || !email) { alert('Please fill all fields'); return; }
-      try {
-        const res = await fetch('/api/bookings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticketId: currentTicket.id, name, email, quantity: qty }),
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          closeModal();
-          showToast(`✓ Booked ${qty} ticket(s) for ${currentTicket.event}! Ref: ${data.booking.id.slice(0,8)}`);
-          load();
-        } else {
-          alert(data.error || 'Booking failed');
-        }
-      } catch(e) { alert('Network error. Try again.'); }
+      // Deduct seats locally
+      const ticket = allTickets.find(t => t.id === currentTicket.id);
+      if (ticket) {
+        ticket.availableSeats = Math.max(0, ticket.availableSeats - qty);
+        if (ticket.availableSeats === 0) ticket.available = false;
+      }
+      const refId = Math.random().toString(36).slice(2,10).toUpperCase();
+      closeModal();
+      showToast(`✓ Booked ${qty} ticket(s) for ${currentTicket.event}! Ref: ${refId}`);
+      render();
     }
     function showToast(msg) {
       const t = document.getElementById('toast');
