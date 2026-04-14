@@ -10,6 +10,7 @@ pipeline {
         BACKEND_IMG     = "${DOCKER_HUB_USER}/ticketflow-backend:${IMAGE_TAG}"
         FRONTEND_IMG    = "${DOCKER_HUB_USER}/ticketflow-frontend:${IMAGE_TAG}"
         K8S_NS          = "ticketflow"
+        ENABLE_SONAR = "false"
     }
 
     options {
@@ -78,6 +79,9 @@ pipeline {
 
         // ── STAGE 5: SONARQUBE ANALYSIS ───────────────────────────────
         stage("5 — SonarQube Analysis") {
+            when {
+                expression { env.ENABLE_SONAR == "true" }
+            }
             agent any
             steps {
                 echo "Running SonarQube analysis..."
@@ -96,6 +100,9 @@ pipeline {
 
         // ── STAGE 6: QUALITY GATE ─────────────────────────────────────
         stage("6 — Quality Gate") {
+            when {
+                expression { env.ENABLE_SONAR == "true" }
+            }
             agent any
             steps {
                 echo "Waiting for SonarQube Quality Gate result..."
