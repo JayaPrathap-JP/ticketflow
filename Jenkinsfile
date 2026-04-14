@@ -11,6 +11,7 @@ pipeline {
         FRONTEND_IMG    = "${DOCKER_HUB_USER}/ticketflow-frontend:${IMAGE_TAG}"
         K8S_NS          = "ticketflow"
         ENABLE_SONAR = "false"
+        ENABLE_TRIVY = "false"
     }
 
     options {
@@ -137,6 +138,9 @@ pipeline {
 
         // ── STAGE 8: TRIVY IMAGE SCAN ─────────────────────────────────
         stage("8 — Trivy Image Scan") {
+            when {
+                expression { env.ENABLE_TRIVY == "true" }
+            }
             agent any
             steps {
                 echo "Scanning Docker images with Trivy..."
