@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service    # nginx.conf proxies to this DNS name
+  namespace: ticketflow
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 3001
+  type: ClusterIP           # internal only — not exposed outside cluster

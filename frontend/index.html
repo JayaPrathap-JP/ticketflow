@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TicketFlow — Book Live Events</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    :root {
+      --bg:#0C0F1A; --surface:#141828; --surface2:#1C2235;
+      --border:#252D45; --accent:#3B82F6; --accent2:#10B981;
+      --text:#E2E8F0; --muted:#64748B; --white:#FFFFFF;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:Inter,sans-serif; min-height:100vh; }
+
+    /* Header */
+    header { padding:16px 48px; border-bottom:1px solid var(--border);
+             display:flex; align-items:center; justify-content:space-between; }
+    .logo  { font-size:1.4rem; font-weight:700; color:var(--accent); }
+    .logo span { color:var(--text); }
+
+    /* Hero */
+    .hero { padding:56px 48px 40px; }
+    .hero h1 { font-size:2.4rem; font-weight:700; margin-bottom:8px; }
+    .hero h1 em { color:var(--accent); font-style:normal; }
+    .hero p  { color:var(--muted); font-size:1rem; }
+
+    /* Filters */
+    .filters { padding:0 48px 24px; display:flex; gap:10px; flex-wrap:wrap; }
+    .chip { background:var(--surface2); border:1px solid var(--border);
+            border-radius:20px; padding:6px 16px; font-size:.82rem;
+            cursor:pointer; color:var(--muted); transition:.2s; }
+    .chip:hover, .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    /* Grid */
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+            gap:20px; padding:0 48px 56px; }
+
+    /* Card */
+    .card { background:var(--surface); border:1px solid var(--border);
+            border-radius:16px; overflow:hidden; transition:transform .2s,border-color .2s; }
+    .card:hover { transform:translateY(-4px); border-color:var(--accent); }
+    .card-banner { height:8px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .card-body { padding:20px; }
+    .card-cat  { font-size:.72rem; color:var(--accent); font-weight:600;
+                 text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+    .card h3   { font-size:1.05rem; font-weight:600; margin-bottom:4px; }
+    .card-meta { color:var(--muted); font-size:.82rem; margin-bottom:12px; line-height:1.6; }
+    .card-foot { display:flex; align-items:center; justify-content:space-between; }
+    .price     { font-size:1.4rem; font-weight:700; color:var(--accent2); }
+    .seats     { font-size:.78rem; color:var(--muted); }
+    .seats.low { color:#F59E0B; }
+    .btn       { background:var(--accent); color:#fff; border:none; border-radius:8px;
+                 padding:9px 18px; font-size:.85rem; font-weight:600; cursor:pointer;
+                 transition:.2s; white-space:nowrap; }
+    .btn:hover   { background:#2563EB; }
+    .btn:disabled{ background:var(--border); color:var(--muted); cursor:not-allowed; }
+
+    /* Modal */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7);
+               z-index:200; align-items:center; justify-content:center; }
+    .overlay.open { display:flex; }
+    .modal   { background:var(--surface); border:1px solid var(--border);
+               border-radius:20px; padding:32px; width:480px; max-width:95vw; }
+    .modal h2 { font-size:1.2rem; margin-bottom:20px; }
+    .form-row { margin-bottom:14px; }
+    .form-row label { display:block; font-size:.8rem; color:var(--muted); margin-bottom:5px; }
+    .form-row input, .form-row select {
+      width:100%; background:var(--bg); border:1px solid var(--border);
+      border-radius:8px; padding:10px 12px; color:var(--text); font-size:.9rem; }
+    .form-row input:focus, .form-row select:focus { border-color:var(--accent); outline:none; }
+    .modal-summary { background:var(--surface2); border-radius:10px;
+                     padding:14px; margin:16px 0; font-size:.85rem; }
+    .modal-summary .row { display:flex; justify-content:space-between; margin-bottom:6px; }
+    .modal-summary .total { font-weight:700; color:var(--accent2); font-size:1rem; }
+    .btn-row { display:flex; gap:10px; margin-top:16px; }
+    .btn-cancel { flex:1; background:transparent; border:1px solid var(--border);
+                  color:var(--text); border-radius:8px; padding:10px; cursor:pointer; }
+    .btn-confirm { flex:2; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:28px; right:28px; background:#064E3B;
+             border:1px solid #10B981; color:#A7F3D0; padding:14px 22px;
+             border-radius:12px; font-size:.88rem; display:none; z-index:300; }
+    .toast.show { display:block; animation:fadeUp .3s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Ticket<span>Flow</span></div>
+    <div style="color:var(--muted);font-size:.85rem">Live Events Platform</div>
+  </header>
+
+  <div class="hero">
+    <h1>Discover <em>Live Events</em></h1>
+    <p>Concerts, Sports, Conferences — all in one place</p>
+  </div>
+
+  <div class="filters">
+    <button class="chip active" onclick="filter('all',this)">All Events</button>
+    <button class="chip" onclick="filter('Concert',this)">Concerts</button>
+    <button class="chip" onclick="filter('Sports',this)">Sports</button>
+    <button class="chip" onclick="filter('Conference',this)">Conferences</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <!-- Booking modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2 id="modal-title">Book Tickets</h2>
+      <div class="form-row">
+        <label>Full Name</label>
+        <input id="f-name" placeholder="e.g. Priya Sharma"/>
+      </div>
+      <div class="form-row">
+        <label>Email Address</label>
+        <input id="f-email" type="email" placeholder="you@email.com"/>
+      </div>
+      <div class="form-row">
+        <label>Number of Tickets</label>
+        <select id="f-qty" onchange="updateSummary()">
+          <option value="1">1 ticket</option>
+          <option value="2">2 tickets</option>
+          <option value="3">3 tickets</option>
+          <option value="4">4 tickets</option>
+          <option value="5">5 tickets</option>
+        </select>
+      </div>
+      <div class="modal-summary" id="summary"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-confirm" onclick="confirmBooking()">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let allTickets = [], currentTicket = null, currentFilter = 'all';
+
+    async function load() {
+      try {
+        const res  = await fetch('/api/tickets');
+        const data = await res.json();
+        allTickets = data.tickets;
+        render();
+      } catch(e) {
+        document.getElementById('grid').innerHTML =
+          '<p style="color:var(--muted);padding:24px">Failed to load tickets.</p>';
+      }
+    }
+
+    function render() {
+      const list = currentFilter === 'all'
+        ? allTickets
+        : allTickets.filter(t => t.category === currentFilter);
+      const grid = document.getElementById('grid');
+      grid.innerHTML = list.map(t => {
+        const low = t.availableSeats <= 20;
+        return `
+          <div class="card">
+            <div class="card-banner"></div>
+            <div class="card-body">
+              <div class="card-cat">${t.category}</div>
+              <h3>${t.event}</h3>
+              <div class="card-meta">
+                📍 ${t.venue}<br>
+                📅 ${new Date(t.date).toLocaleDateString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
+                &nbsp;&nbsp;⏰ ${t.time}
+              </div>
+              <div class="card-foot">
+                <div>
+                  <div class="price">₹${t.price}</div>
+                  <div class="seats ${low?'low':''}">${t.availableSeats} seats left</div>
+                </div>
+                <button class="btn" ${!t.available?'disabled':''}
+                  onclick="openModal('${t.id}')">
+                  ${t.available ? 'Book Now' : 'Sold Out'}
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function filter(cat, el) {
+      currentFilter = cat;
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      render();
+    }
+
+    function openModal(id) {
+      currentTicket = allTickets.find(t => t.id === id);
+      if (!currentTicket) return;
+      document.getElementById('modal-title').textContent = currentTicket.event;
+      document.getElementById('f-name').value = '';
+      document.getElementById('f-email').value = '';
+      document.getElementById('f-qty').value = '1';
+      updateSummary();
+      document.getElementById('overlay').classList.add('open');
+    }
+    function closeModal() {
+      document.getElementById('overlay').classList.remove('open');
+    }
+    function updateSummary() {
+      if (!currentTicket) return;
+      const qty   = parseInt(document.getElementById('f-qty').value);
+      const total = currentTicket.price * qty;
+      document.getElementById('summary').innerHTML = `
+        <div class="row"><span>Ticket price</span><span>₹${currentTicket.price}</span></div>
+        <div class="row"><span>Quantity</span><span>${qty}</span></div>
+        <div class="row total"><span>Total</span><span>₹${total}</span></div>`,
+    }
+    async function confirmBooking() {
+      const name  = document.getElementById('f-name').value.trim();
+      const email = document.getElementById('f-email').value.trim();
+      const qty   = parseInt(document.getElementById('f-qty').value);
+      if (!name || !email) { alert('Please fill all fields'); return; }
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticketId: currentTicket.id, name, email, quantity: qty }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          closeModal();
+          showToast(`✓ Booked ${qty} ticket(s) for ${currentTicket.event}! Ref: ${data.booking.id.slice(0,8)}`);
+          load();
+        } else {
+          alert(data.error || 'Booking failed');
+        }
+      } catch(e) { alert('Network error. Try again.'); }
+    }
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 4000);
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# .trivyignore
+# Each entry requires: CVE ID, reason, and review date
+
+# Example: fixed in next scheduled base image upgrade (review: 2026-09-01)
+# CVE-2023-44487
