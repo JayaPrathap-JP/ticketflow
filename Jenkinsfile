@@ -221,7 +221,9 @@ pipeline {
 
     // ── POST ACTIONS ─────────────────────────────────────────────────
     post {
+        
         failure {
+            node {
             echo "Pipeline FAILED — initiating rollback..."
             withCredentials([file(
                 credentialsId: "${KUBE_CREDS}",
@@ -232,13 +234,18 @@ pipeline {
                     kubectl rollout undo deployment/frontend -n %K8S_NS%
                 """
             }
+            }
         }
         success {
+            node {
             echo "Pipeline SUCCEEDED — TicketFlow deployed successfully."
         }
+        }
         always {
+            node{
             bat "docker logout || exit /b 0"
             cleanWs()
+            }
         }
     }
 }
