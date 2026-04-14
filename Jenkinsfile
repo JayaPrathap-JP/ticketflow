@@ -27,7 +27,7 @@ pipeline {
             steps {
                 echo "Checking out source from SCM..."
                 checkout scm
-                sh "git log -1 --pretty=format:'%H %s' || true"
+                bat 'git log -1 --pretty=format:"%%H %%s" || exit /b 0'
             }
         }
 
@@ -37,7 +37,7 @@ pipeline {
             steps {
                 echo "Installing dependencies..."
                 dir("backend") {
-                    sh "npm ci"
+                    bat "npm ci"
                 }
             }
         }
@@ -48,7 +48,7 @@ pipeline {
             steps {
                 echo "Running unit tests..."
                 dir("backend") {
-                    sh "npm run test:unit"
+                    bat "npm run test:unit"
                 }
             }
             post {
@@ -65,7 +65,7 @@ pipeline {
             steps {
                 echo "Running integration tests..."
                 dir("backend") {
-                    sh "npm run test:integration"
+                    bat "npm run test:integration"
                 }
             }
             post {
@@ -76,38 +76,20 @@ pipeline {
             }
         }
 
-        // ── STAGE 5: SONARQUBE ANALYSIS (Dynamic Agent) ───────────────
+        // ── STAGE 5: SONARQUBE ANALYSIS ───────────────────────────────
         stage("5 — SonarQube Analysis") {
-            agent {
-                kubernetes {
-                    label "sonarqube-agent"
-                    defaultContainer "sonar-scanner"
-                    yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: sonar-scanner
-      image: sonarsource/sonar-scanner-cli:latest
-      command:
-        - cat
-      tty: true
-"""
-                }
-            }
+            agent any
             steps {
                 echo "Running SonarQube analysis..."
-                container('sonar-scanner') {
-                    withSonarQubeEnv("${SONAR_SERVER}") {
-                        sh """
-                            sonar-scanner \
-                              -Dsonar.projectKey=ticketflow-backend \
-                              -Dsonar.sources=backend \
-                              -Dsonar.exclusions=**/node_modules/**,**/tests/** \
-                              -Dsonar.tests=backend/tests \
-                              -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
-                        """
-                    }
+                withSonarQubeEnv("${SONAR_SERVER}") {
+                    bat """
+                        sonar-scanner ^
+                        -Dsonar.projectKey=ticketflow-backend ^
+                        -Dsonar.sources=backend ^
+                        -Dsonar.exclusions=**/node_modules/**,**/tests/** ^
+                        -Dsonar.tests=backend/tests ^
+                        -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
+                    """
                 }
             }
         }
@@ -125,67 +107,34 @@ spec:
 
         // ── STAGE 7: BUILD DOCKER IMAGES ──────────────────────────────
         stage("7 — Build Docker Images") {
-           
+            agent any
             parallel {
                 stage("Backend Image") {
                     steps {
                         dir("backend") {
-                            sh "docker build -t ${BACKEND_IMG} ."
+                            bat "docker build -t %BACKEND_IMG% ."
                         }
                     }
                 }
                 stage("Frontend Image") {
                     steps {
                         dir("frontend") {
-                            sh "docker build -t ${FRONTEND_IMG} ."
+                            bat "docker build -t %FRONTEND_IMG% ."
                         }
                     }
                 }
             }
         }
 
-        // ── STAGE 8: TRIVY IMAGE SCAN (Dynamic Agent) ─────────────────
+        // ── STAGE 8: TRIVY IMAGE SCAN ─────────────────────────────────
         stage("8 — Trivy Image Scan") {
-            agent {
-                kubernetes {
-                    label "trivy-agent"
-                    defaultContainer "trivy"
-                    yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: trivy
-      image: aquasec/trivy:latest
-      command:
-        - cat
-      tty: true
-"""
-                }
-            }
+            agent any
             steps {
                 echo "Scanning Docker images with Trivy..."
-                container('trivy') {
-                    sh """
-                        trivy image \
-                          --exit-code 1 \
-                          --severity CRITICAL,HIGH \
-                          --ignore-unfixed \
-                          --no-progress \
-                          --format table \
-                          --output trivy-backend.txt \
-                          ${BACKEND_IMG}
-
-                        trivy image \
-                          --exit-code 1 \
-                          --severity CRITICAL,HIGH \
-                          --ignore-unfixed \
-                          --no-progress \
-                          --format table \
-                          --output trivy-frontend.txt \
-                          ${FRONTEND_IMG}
-                    """
-                }
+                bat """
+                    trivy image --severity CRITICAL,HIGH --ignore-unfixed --no-progress --format table --output trivy-backend.txt %BACKEND_IMG%
+                    trivy image --severity CRITICAL,HIGH --ignore-unfixed --no-progress --format table --output trivy-frontend.txt %FRONTEND_IMG%
+                """
             }
             post {
                 always {
@@ -205,15 +154,12 @@ spec:
                     usernameVariable: "DH_USER",
                     passwordVariable: "DH_PASS"
                 )]) {
-                    sh """
-                        echo ${DH_PASS} | docker login -u ${DH_USER} --password-stdin
-
-                        docker push ${BACKEND_IMG}
-                        docker push ${FRONTEND_IMG}
-
-                        docker tag ${BACKEND_IMG} ${DOCKER_HUB_USER}/ticketflow-backend:latest
-                        docker tag ${FRONTEND_IMG} ${DOCKER_HUB_USER}/ticketflow-frontend:latest
-
+                    bat """
+                        echo %DH_PASS% | docker login -u %DH_USER% --password-stdin
+                        docker push %BACKEND_IMG%
+                        docker push %FRONTEND_IMG%
+                        docker tag %BACKEND_IMG% ${DOCKER_HUB_USER}/ticketflow-backend:latest
+                        docker tag %FRONTEND_IMG% ${DOCKER_HUB_USER}/ticketflow-frontend:latest
                         docker push ${DOCKER_HUB_USER}/ticketflow-backend:latest
                         docker push ${DOCKER_HUB_USER}/ticketflow-frontend:latest
                     """
@@ -230,18 +176,12 @@ spec:
                     credentialsId: "${KUBE_CREDS}",
                     variable: "KUBECONFIG"
                 )]) {
-                    sh """
+                    bat """
                         kubectl apply -f k8s/
-
-                        kubectl set image deployment/backend \
-                            backend=${BACKEND_IMG} -n ${K8S_NS}
-
-                        kubectl set image deployment/frontend \
-                            frontend=${FRONTEND_IMG} -n ${K8S_NS}
-
-                        kubectl annotate deployment/backend deployment/frontend \
-                            kubernetes.io/change-cause="Build #${BUILD_NUMBER}" \
-                            -n ${K8S_NS} --overwrite
+                        kubectl set image deployment/backend backend=%BACKEND_IMG% -n %K8S_NS%
+                        kubectl set image deployment/frontend frontend=%FRONTEND_IMG% -n %K8S_NS%
+                        kubectl annotate deployment/backend kubernetes.io/change-cause="Build #%BUILD_NUMBER%" -n %K8S_NS% --overwrite
+                        kubectl annotate deployment/frontend kubernetes.io/change-cause="Build #%BUILD_NUMBER%" -n %K8S_NS% --overwrite
                     """
                 }
             }
@@ -256,14 +196,10 @@ spec:
                     credentialsId: "${KUBE_CREDS}",
                     variable: "KUBECONFIG"
                 )]) {
-                    sh """
-                        kubectl rollout status deployment/backend \
-                            -n ${K8S_NS} --timeout=120s
-
-                        kubectl rollout status deployment/frontend \
-                            -n ${K8S_NS} --timeout=120s
-
-                        kubectl get pods -n ${K8S_NS}
+                    bat """
+                        kubectl rollout status deployment/backend -n %K8S_NS% --timeout=120s
+                        kubectl rollout status deployment/frontend -n %K8S_NS% --timeout=120s
+                        kubectl get pods -n %K8S_NS%
                     """
                 }
             }
@@ -278,9 +214,9 @@ spec:
                 credentialsId: "${KUBE_CREDS}",
                 variable: "KUBECONFIG"
             )]) {
-                sh """
-                    kubectl rollout undo deployment/backend -n ${K8S_NS} || true
-                    kubectl rollout undo deployment/frontend -n ${K8S_NS} || true
+                bat """
+                    kubectl rollout undo deployment/backend -n %K8S_NS%
+                    kubectl rollout undo deployment/frontend -n %K8S_NS%
                 """
             }
         }
@@ -288,7 +224,7 @@ spec:
             echo "Pipeline SUCCEEDED — TicketFlow deployed successfully."
         }
         always {
-            sh "docker logout || true"
+            bat "docker logout || exit /b 0"
             cleanWs()
         }
     }
