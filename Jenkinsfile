@@ -1,5 +1,5 @@
 pipeline {
-    agent none
+    agent any
 
     environment {
         DOCKER_HUB_USER = "jayaprathap96"
@@ -223,7 +223,7 @@ pipeline {
     post {
         
         failure {
-            node('any') {
+          
             echo "Pipeline FAILED — initiating rollback..."
             withCredentials([file(
                 credentialsId: "${KUBE_CREDS}",
@@ -234,18 +234,18 @@ pipeline {
                     kubectl rollout undo deployment/frontend -n %K8S_NS%
                 """
             }
-            }
+            
         }
         success {
-            node('any') {
+           
             echo "Pipeline SUCCEEDED — TicketFlow deployed successfully."
-        }
+        
         }
         always {
-            node('any') {
+           
             bat "docker logout || exit /b 0"
             cleanWs()
-            }
+            
         }
     }
 }
