@@ -107,7 +107,7 @@ pipeline {
 
         // ── STAGE 7: BUILD DOCKER IMAGES ──────────────────────────────
         stage("7 — Build Docker Images") {
-            agent any
+            
             parallel {
                 stage("Backend Image") {
                     steps {
